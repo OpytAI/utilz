@@ -1,0 +1,6 @@
+utilz
+Copyright 2026 opyt.cloud
+
+Behavior is compared to uutils 0.9.0 (https://github.com/uutils/coreutils),
+which is MIT-licensed. utilz is a Zig implementation, not a crate dependency
+and not a copy of the uutils source tree.
