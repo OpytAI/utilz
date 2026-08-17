@@ -1,0 +1,37 @@
+load("@rules_zig//zig:defs.bzl", "zig_binary", "zig_configure_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+zig_binary(
+    name = "cat_ls_exe",
+    main = "cat_ls.zig",
+    tags = ["manual"],
+    zigopts = [
+        "-fno-entry",
+        "-rdynamic",
+        "-fsingle-threaded",
+    ],
+    deps = ["//src:lib"],
+)
+
+zig_configure_binary(
+    name = "cat_ls",
+    actual = ":cat_ls_exe",
+    mode = "release_small",
+    target = "//platforms:wasm32_freestanding",
+)
+
+zig_binary(
+    name = "wasm_imports",
+    main = "wasm_imports.zig",
+)
+
+sh_test(
+    name = "import_audit",
+    size = "small",
+    srcs = ["import_audit.sh"],
+    data = [
+        ":cat_ls",
+        ":wasm_imports",
+    ],
+)

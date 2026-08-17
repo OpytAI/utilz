@@ -1,0 +1,60 @@
+load("@rules_zig//zig:defs.bzl", "zig_binary", "zig_library", "zig_test")
+
+exports_files(glob(["*_test.zig"]))
+
+zig_library(
+    name = "build_options",
+    import_name = "build_options",
+    main = "build_options.zig",
+    visibility = ["//visibility:public"],
+)
+
+LIB_SRCS = glob(
+    [
+        "**/*.zig",
+    ],
+    exclude = [
+        "root.zig",
+        "build_options.zig",
+        "bin/**",
+        "sys_test.zig",
+        "applets_test.zig",
+        "engines_test.zig",
+        "utilz_test.zig",
+    ],
+)
+
+zig_library(
+    name = "lib",
+    srcs = LIB_SRCS,
+    import_name = "utilz",
+    main = "root.zig",
+    visibility = ["//visibility:public"],
+    deps = [":build_options"],
+)
+
+zig_test(
+    name = "utilz_test",
+    size = "medium",
+    srcs = LIB_SRCS + [
+        "root.zig",
+        "sys_test.zig",
+        "applets_test.zig",
+        "engines_test.zig",
+    ],
+    extra_srcs = [
+        "engines/compress/fixtures/one.bz2",
+        "engines/compress/fixtures/one.txt",
+        "engines/compress/fixtures/multiblock.bz2",
+        "engines/compress/fixtures/multiblock.txt",
+    ],
+    main = "utilz_test.zig",
+    deps = [":build_options"],
+)
+
+zig_binary(
+    name = "utilz",
+    main = "bin/utilz.zig",
+    visibility = ["//visibility:public"],
+    deps = [":lib"],
+)

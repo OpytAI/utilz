@@ -1,0 +1,17 @@
+load("@rules_zig//zig:defs.bzl", "zig_test")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "goldens",
+    srcs = glob(["goldens/**"]),
+)
+
+zig_test(
+    name = "goldens_test",
+    size = "small",
+    extra_srcs = glob(["goldens/**"]),
+    main = "goldens_test.zig",
+    deps = ["//src:lib"],
+)
+
