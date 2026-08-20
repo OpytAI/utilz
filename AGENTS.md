@@ -94,6 +94,7 @@ Short form:
 |------|----------|
 | Unit | Co-located `test` blocks next to engines and applets |
 | Goldens | `data/goldens/` |
+| POSIX | `src/sys/posix_spawn_test.zig`, `src/sys/http_test.zig` |
 
 Production `zig_library` targets must **not** depend on test-only packages.
 

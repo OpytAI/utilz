@@ -1,7 +1,5 @@
 load("@rules_zig//zig:defs.bzl", "zig_binary", "zig_library", "zig_test")
 
-exports_files(glob(["*_test.zig"]))
-
 zig_library(
     name = "build_options",
     import_name = "build_options",
@@ -17,10 +15,7 @@ LIB_SRCS = glob(
         "root.zig",
         "build_options.zig",
         "bin/**",
-        "sys_test.zig",
-        "applets_test.zig",
-        "engines_test.zig",
-        "utilz_test.zig",
+        "**/*_test.zig",
     ],
 )
 
@@ -56,5 +51,19 @@ zig_binary(
     name = "utilz",
     main = "bin/utilz.zig",
     visibility = ["//visibility:public"],
+    deps = [":lib"],
+)
+
+zig_test(
+    name = "posix_spawn_test",
+    size = "small",
+    main = "sys/posix_spawn_test.zig",
+    deps = [":lib"],
+)
+
+zig_test(
+    name = "http_test",
+    size = "small",
+    main = "sys/http_test.zig",
     deps = [":lib"],
 )

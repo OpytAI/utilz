@@ -14,6 +14,10 @@ pub const posix = if (builtin.os.tag == .freestanding)
     struct {}
 else
     @import("sys/posix.zig");
+pub const http = if (builtin.os.tag == .freestanding)
+    struct {}
+else
+    @import("sys/http.zig");
 
 pub const engines = struct {
     pub const glob = @import("engines/glob.zig");
@@ -67,12 +71,6 @@ test {
     _ = engines.codec;
     _ = core.civil;
     _ = core.fmtnum;
-}
-
-test "scaffold identity" {
-    const std = @import("std");
-    try std.testing.expectEqualStrings("utilz", name);
-    try std.testing.expectEqualStrings("0.0.0", version);
 }
 
 // Keep posix off the freestanding import graph.

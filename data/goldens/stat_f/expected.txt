@@ -1,0 +1,8 @@
+File: /tmp/f
+Size: 1
+Links: 1
+Type: regular file
+Mode: (0644/-rw-r--r--)
+Modify: 1970-01-01 00:00:00
+Change: 1970-01-01 00:00:00
+Access: 1970-01-01 00:00:00

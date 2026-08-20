@@ -1,0 +1,1 @@
+comm /tmp/a /tmp/b

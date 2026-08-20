@@ -1,9 +1,7 @@
-//! The one applet list (DESIGN.md §5.1), the Zig analogue of the Rust `mcbox!` macro.
-//! Pairs `registry_data.zig`'s pure name/tier/min_set data with `run` function pointers.
-//! The whole 88-name roster is ported: every name in `registry_data` MUST have a real
-//! `run` through `wiredRun`. Imports are selected only after
-//! the Bazel build options filter the roster, so lower-tier boxes do not link higher-tier
-//! syscalls.
+//! The one applet list (DESIGN.md §5.1).
+//! Pairs `registry_data.zig` with `run` function pointers.
+//! Every roster name must have a `run` through `wiredRun`.
+//! Build options can filter the roster so a smaller box does not link unused applets.
 
 const std = @import("std");
 const build_options = @import("build_options");

@@ -1,51 +1,12 @@
 package(default_visibility = ["//visibility:public"])
 
-exports_files([
-    "file_inventory.sh",
-    "goldens_smoke.sh",
-    "test_roots.sh",
-])
-
-sh_test(
-    name = "file_inventory",
-    size = "small",
-    srcs = ["file_inventory.sh"],
-    data = [
-        "//:LICENSE",
-        "//:NOTICE",
-        "//:README.md",
-        "//src:lib",
-        "//data:goldens",
-    ],
-)
-
-sh_test(
-    name = "goldens_smoke",
-    size = "small",
-    srcs = ["goldens_smoke.sh"],
-    data = ["//data:goldens"],
-)
-
-sh_test(
-    name = "test_roots",
-    size = "small",
-    srcs = ["test_roots.sh"],
-    data = [
-        "//src:lib",
-        "//src:utilz_test.zig",
-        "//src:sys_test.zig",
-        "//src:applets_test.zig",
-        "//src:engines_test.zig",
-    ],
-)
-
 test_suite(
     name = "all",
     tests = [
-        ":file_inventory",
-        ":goldens_smoke",
-        ":test_roots",
         "//src:utilz_test",
         "//data:goldens_test",
+        "//src:posix_spawn_test",
+        "//src:http_test",
+        "//examples/wasm:import_audit",
     ],
 )

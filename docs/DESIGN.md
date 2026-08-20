@@ -9,10 +9,8 @@ world through `sys.Impl`. Behavior is compared to uutils 0.9.0.
 utilz ships engines plus applets over an attachable `sys.Impl`. Embedders
 attach a memory or POSIX backend (or their own) and call `run(*Ctx) u8`.
 The roster in `src/registry_data.zig` is the authoritative inventory.
-
-The roster in `src/registry_data.zig` is the authoritative inventory. Each applet's leading comment
-states its implemented option and behavior scope; this section replaces the deleted milestone inventory
-those comments historically cited.
+Each applet's leading comment states its implemented option and behavior
+scope.
 
 ## 2. Parity policy
 
@@ -22,7 +20,7 @@ on a given backend; those exceptions must be stated beside the implementation an
 or hardware-capability chatter may be a no-op when it cannot change the requested operation.
 
 Concrete scope rulings and oracle observations remain beside the affected applet and its regression
-tests. This section replaces the deleted parity ledger as their common policy, not as a duplicate list.
+tests.
 
 Text processing is byte-oriented unless an applet explicitly documents Unicode behavior. The shared
 line model accepts CRLF, strips one trailing `\r`, and still yields an unterminated final line.
@@ -53,22 +51,38 @@ recursive deletion therefore empties a directory before unlinking it.
 ### 4.2 Backends
 
 `sys/mem.zig` is an in-memory `sys.Impl`. `sys/posix.zig` is the host backend.
-Network calls return `ENOSYS` on both. A consumer may attach its own
-backend with the same `sys.Impl` surface.
+POSIX `spawn` execs host processes (`execvp` PATH search). `Posix.search_path`
+overrides PATH (test-only). Otherwise PATH comes from the `/env` overlay when
+that directory exists (missing → `/usr/bin:/bin`; empty → `ENOENT`), else from
+`/proc/self/environ`. Network
+calls return `ENOSYS` on both default backends. `wscat` / `wsOpen` stay
+`ENOSYS`.
+
+`sys/http.zig` is an opt-in wrapper around an inner `Impl`. Attach only the
+wrapper. It may connect only to loopback (`127.0.0.0/8` and `localhost` →
+`127.0.0.1`). Response bodies are copied through `inner.pipe()` so caller
+fds stay in one namespace. v1 bodies are capped at 64 KiB.
+
+A consumer may attach its own backend with the same `sys.Impl` surface.
 
 ### 4.3 Environment
 
-`core/envfs.zig` is an optional `/env` file adapter. It is not the default host
-environment. `printenv` / `env` / `which` / `pwd -L` use it when `/env/<NAME>`
-exists. Mem and POSIX backends do not create `/env` unless the embedder does.
-`pwd` without a usable `/env/PWD` uses `sys.getcwd`.
+`core/envfs.zig` is an optional `/env` file adapter. `printenv` / `env` /
+`which` / `pwd -L` use it when `/env/<NAME>` exists. `pwd` without a usable
+`/env/PWD` uses `sys.getcwd`.
+
+POSIX `spawn` uses `/proc/self/environ` as `envp` unless the in-process `/env`
+directory has been created. `env -i` / `-u` / `NAME=VALUE` mkdir that overlay
+(not a host path), so child envp matches those mutations. The overlay is
+removed after `env` returns. Other applets that do not mkdir `/env` still pass
+the process snapshot.
 
 ## 5. Program structure
 
 ### 5.1 One registry
 
-`registry_data.zig` is the only applet roster. It drives dispatch, help/version behavior, generated
-image symlinks, and `mc_applets` metadata. Adding or removing an applet anywhere else is incomplete.
+`registry_data.zig` is the only applet roster. It drives dispatch and help/version
+behavior. Adding or removing an applet anywhere else is incomplete.
 Function references in the registry provide the dead-code roots; there is no secondary hand list.
 
 ### 5.2 Applets and engines
@@ -111,8 +125,7 @@ metadata come from the same registry entry as the executable function.
 
 ### 7.1 Regex
 
-The shared regex engine is a pure-Zig Pike VM. It is reusable by grep, sed, awk, and future applets;
-word-boundary assertions were added as part of the grep milestone (M3).
+The shared regex engine is a pure-Zig Pike VM. It is reusable by grep, sed, awk, and future applets.
 
 ### 7.2 Glob
 
@@ -158,16 +171,8 @@ Streaming filters use bounded read/write buffers. Algorithms that require a glob
 archives, some sort/diff modes—may read a complete input, but must state that fact and remain subject to
 a documented memory budget. Use a spill directory when an algorithm supports it.
 
-## 11. Size rules
+## 9. Size rules
 
 1. Prefer shared facades and engine code over applet-local copies of nontrivial logic.
 2. Do not import host-oriented filesystem/IO stacks into shipped wasm merely for convenience.
 3. Keep diagnostics on the minimal formatter unless an engine truly requires richer formatting.
-
-These are enforced by the built artifact's size budget as well as review.
-
-## 14. Adapter checklist
-
-R1: every ABI value comes from the generated contracts. The mc adapter translates types and calling
-conventions only. It must preserve all known errnos, use the generated stat layout, and keep unsupported
-values explicit (`EUNKNOWN`) rather than guessing.

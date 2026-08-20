@@ -132,12 +132,6 @@ pub fn run(ctx: *Ctx) u8 {
         break;
     }
 
-    if (clear_env) {
-        const names = envfs.list(ctx.gpa) catch &.{};
-        for (names) |name| envfs.unset(name) catch {};
-    }
-    for (unsets.items) |name| envfs.unset(name) catch {};
-
     if (chdir_to) |dir| {
         sys.chdir(dir) catch |e| {
             ctx.errPrint("env: cannot change directory to {s}: {s}\n", .{ dir, sys.strerror(sys.toErrno(e)) });
@@ -149,16 +143,27 @@ pub fn run(ctx: *Ctx) u8 {
     var ci: usize = 0;
     while (ci < rest.len) : (ci += 1) {
         const tok = rest[ci];
-        const eq_idx = std.mem.indexOfScalar(u8, tok, '=') orelse break;
-        envfs.set(tok[0..eq_idx], tok[eq_idx + 1 ..]) catch |e| {
-            ctx.errPrint("env: {s}: {s}\n", .{ tok[0..eq_idx], sys.strerror(sys.toErrno(e)) });
-            return 1;
-        };
+        if (std.mem.indexOfScalar(u8, tok, '=') == null) break;
     }
     const command = rest[ci..];
+    const has_assign = ci > 0;
+    const mutating = clear_env or unsets.items.len > 0 or has_assign;
 
     if (command.len == 0) {
-        // Sorted NAME=VALUE listing of the (post-mutation) environment.
+        if (clear_env) {
+            const names = envfs.list(ctx.gpa) catch &.{};
+            for (names) |name| envfs.unset(name) catch {};
+        }
+        for (unsets.items) |name| envfs.unset(name) catch {};
+        var ai: usize = 0;
+        while (ai < ci) : (ai += 1) {
+            const tok = rest[ai];
+            const eq_idx = std.mem.indexOfScalar(u8, tok, '=') orelse break;
+            envfs.set(tok[0..eq_idx], tok[eq_idx + 1 ..]) catch |e| {
+                ctx.errPrint("env: {s}: {s}\n", .{ tok[0..eq_idx], sys.strerror(sys.toErrno(e)) });
+                return 1;
+            };
+        }
         var out = textio.BufOut.init(ctx.stdout);
         const names = envfs.list(ctx.gpa) catch &.{};
         for (names) |name| {
@@ -171,10 +176,39 @@ pub fn run(ctx: *Ctx) u8 {
         return 0;
     }
 
+    if (mutating) {
+        sys.mkdir("/env") catch |e| switch (e) {
+            error.EEXIST => {},
+            else => {
+                ctx.errPrint("env: /env: {s}\n", .{sys.strerror(sys.toErrno(e))});
+                return 1;
+            },
+        };
+        if (clear_env) {
+            const names = envfs.list(ctx.gpa) catch &.{};
+            for (names) |name| envfs.unset(name) catch {};
+        } else {
+            copyHostEnviron(ctx.gpa);
+            for (unsets.items) |name| envfs.unset(name) catch {};
+        }
+        var ai: usize = 0;
+        while (ai < ci) : (ai += 1) {
+            const tok = rest[ai];
+            const eq_idx = std.mem.indexOfScalar(u8, tok, '=') orelse break;
+            envfs.set(tok[0..eq_idx], tok[eq_idx + 1 ..]) catch |e| {
+                ctx.errPrint("env: {s}: {s}\n", .{ tok[0..eq_idx], sys.strerror(sys.toErrno(e)) });
+                wipeEnvDir(ctx.gpa);
+                return 1;
+            };
+        }
+    }
+
     var argv: std.ArrayListUnmanaged([]const u8) = .empty;
     for (command) |a| argv.append(ctx.gpa, a) catch @panic("OOM");
     const blob = proc.argvBlob(ctx.gpa, argv.items) catch @panic("OOM");
-    switch (proc.spawnWait(blob, ctx.stdin, ctx.stdout, ctx.stderr)) {
+    const result = proc.spawnWait(blob, ctx.stdin, ctx.stdout, ctx.stderr);
+    if (mutating) wipeEnvDir(ctx.gpa);
+    switch (result) {
         .status => |st| return proc.statusToExit(st),
         .spawn_err => |e| {
             if (e == error.ENOENT) {
@@ -186,4 +220,25 @@ pub fn run(ctx: *Ctx) u8 {
         },
         .wait_err => return 1,
     }
+}
+
+fn copyHostEnviron(gpa: std.mem.Allocator) void {
+    const fd = sys.open("/proc/self/environ", .{ .read = true }) catch return;
+    defer sys.close(fd);
+    const raw = textio.readAll(gpa, fd) catch return;
+    var it = std.mem.splitScalar(u8, raw, 0);
+    while (it.next()) |entry| {
+        if (entry.len == 0) continue;
+        const eq_idx = std.mem.indexOfScalar(u8, entry, '=') orelse continue;
+        if (eq_idx == 0) continue;
+        const name = entry[0..eq_idx];
+        if (std.mem.indexOfScalar(u8, name, 0) != null) continue;
+        envfs.set(name, entry[eq_idx + 1 ..]) catch {};
+    }
+}
+
+fn wipeEnvDir(gpa: std.mem.Allocator) void {
+    const names = envfs.list(gpa) catch &.{};
+    for (names) |name| envfs.unset(name) catch {};
+    sys.unlink("/env") catch {};
 }

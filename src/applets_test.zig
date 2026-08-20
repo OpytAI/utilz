@@ -1,4 +1,4 @@
-//! Applet goldens over mem `sys.Impl`. Oracle: uutils 0.9.0 behavior.
+//! Registry sweep and fail-closed net hooks. Behavior goldens live in `data/goldens/`.
 
 const std = @import("std");
 const sys = @import("sys/root.zig");
@@ -41,86 +41,6 @@ fn run(world: *mem.Mem, args: []const []const u8) !Run {
     };
 }
 
-fn expectOut(world: *mem.Mem, args: []const []const u8, want: []const u8) !void {
-    const got = try run(world, args);
-    defer std.testing.allocator.free(got.stdout);
-    defer std.testing.allocator.free(got.stderr);
-    try std.testing.expectEqual(@as(u8, 0), got.status);
-    try std.testing.expectEqualStrings(want, got.stdout);
-}
-
-test "echo cat printf" {
-    const world = try mem.Mem.init(std.testing.allocator);
-    defer world.deinit();
-    world.attach();
-    defer sys.detach();
-    try expectOut(world, &.{ "echo", "hello" }, "hello\n");
-    {
-        const fd = try sys.open("/tmp/f", .{ .write = true, .create = true, .trunc = true });
-        try sys.writeAll(fd, "abc\n");
-        sys.close(fd);
-        try expectOut(world, &.{ "cat", "/tmp/f" }, "abc\n");
-    }
-    try expectOut(world, &.{ "printf", "%s", "hi" }, "hi");
-}
-
-test "true false basename dirname seq test" {
-    const world = try mem.Mem.init(std.testing.allocator);
-    defer world.deinit();
-    world.attach();
-    defer sys.detach();
-    try std.testing.expectEqual(@as(u8, 0), (try runAndFree(world, &.{"true"})).status);
-    try std.testing.expectEqual(@as(u8, 1), (try runAndFree(world, &.{"false"})).status);
-    try expectOut(world, &.{ "basename", "/a/b" }, "b\n");
-    try expectOut(world, &.{ "dirname", "/a/b" }, "/a\n");
-    try expectOut(world, &.{ "seq", "1", "3" }, "1\n2\n3\n");
-    try std.testing.expectEqual(@as(u8, 0), (try runAndFree(world, &.{ "test", "a", "=", "a" })).status);
-}
-
-test "text filters head wc" {
-    const world = try mem.Mem.init(std.testing.allocator);
-    defer world.deinit();
-    world.attach();
-    defer sys.detach();
-    const fd = try sys.open("/tmp/lines", .{ .write = true, .create = true, .trunc = true });
-    try sys.writeAll(fd, "a\nb\nc\n");
-    sys.close(fd);
-    try expectOut(world, &.{ "head", "-n", "1", "/tmp/lines" }, "a\n");
-    try expectOut(world, &.{ "wc", "-l", "/tmp/lines" }, "3 /tmp/lines\n");
-}
-
-test "mkdir creates a directory" {
-    const world = try mem.Mem.init(std.testing.allocator);
-    defer world.deinit();
-    world.attach();
-    defer sys.detach();
-    try std.testing.expectEqual(@as(u8, 0), (try runAndFree(world, &.{ "mkdir", "/tmp/d" })).status);
-    const st = try sys.stat("/tmp/d");
-    try std.testing.expect(st.is_dir);
-}
-
-test "grep matches a line" {
-    const world = try mem.Mem.init(std.testing.allocator);
-    defer world.deinit();
-    world.attach();
-    defer sys.detach();
-    const fd = try sys.open("/tmp/g", .{ .write = true, .create = true, .trunc = true });
-    try sys.writeAll(fd, "foo\nbar\nbaz\n");
-    sys.close(fd);
-    try expectOut(world, &.{ "grep", "bar", "/tmp/g" }, "bar\n");
-}
-
-test "base64 hello" {
-    const world = try mem.Mem.init(std.testing.allocator);
-    defer world.deinit();
-    world.attach();
-    defer sys.detach();
-    const fd = try sys.open("/tmp/h", .{ .write = true, .create = true, .trunc = true });
-    try sys.writeAll(fd, "hello");
-    sys.close(fd);
-    try expectOut(world, &.{ "base64", "/tmp/h" }, "aGVsbG8=\n");
-}
-
 test "every landed applet accepts --help or runs" {
     const world = try mem.Mem.init(std.testing.allocator);
     defer world.deinit();
@@ -147,6 +67,7 @@ test "fetch and net hooks fail closed" {
     world.attach();
     defer sys.detach();
     try std.testing.expectError(error.ENOSYS, sys.httpGet("https://example.com/"));
+    try std.testing.expectError(error.ENOSYS, sys.httpGet("http://127.0.0.1/"));
     try std.testing.expectError(error.ENOSYS, sys.httpRequest("GET https://example.com/\n\n"));
     try std.testing.expectError(error.ENOSYS, sys.wsOpen("wss://example.com/"));
     const got = try run(world, &.{ "fetch", "https://example.com/" });
@@ -154,13 +75,4 @@ test "fetch and net hooks fail closed" {
     defer std.testing.allocator.free(got.stderr);
     try std.testing.expect(got.status != 0);
     try std.testing.expect(std.mem.indexOf(u8, got.stderr, "fetch:") != null);
-}
-
-const FreeRun = struct { status: u8 };
-
-fn runAndFree(world: *mem.Mem, args: []const []const u8) !FreeRun {
-    const got = try run(world, args);
-    std.testing.allocator.free(got.stdout);
-    std.testing.allocator.free(got.stderr);
-    return .{ .status = got.status };
 }

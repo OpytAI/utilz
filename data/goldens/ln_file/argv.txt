@@ -1,0 +1,1 @@
+ln /tmp/lnsrc /tmp/lndst

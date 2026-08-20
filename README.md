@@ -44,7 +44,9 @@ dependency.
   awk/jq/sed subsets.
 - **Applets** — `run(*Ctx) u8` over an attached `sys.Impl`.
 - **Pluggable backend** — `sys.attach` / `sys.detach` with mem and POSIX
-  implementations. Network applets return `ENOSYS` on those backends.
+  implementations. POSIX spawn execs host processes. Network applets return
+  `ENOSYS` on those backends. An opt-in HTTP wrapper speaks loopback only;
+  `wscat` stays `ENOSYS`.
 
 ## Build
 
@@ -62,8 +64,10 @@ Useful targets:
 | `//src:lib` | Same library (leaf label) |
 | `//src:utilz` | Host multicall (`utilz ls .`) |
 | `//src:utilz_test` | Engines and attach tests |
+| `//src:posix_spawn_test` | Host spawn, xargs/env/find |
+| `//src:http_test` | Loopback fetch/wget |
 | `//data:goldens_test` | Applet goldens versus `data/goldens/` |
-| `//check:all` | Light inventory and golden smoke |
+| `//check:all` | Named acceptance suite |
 
 The repository `.bazelrc` selects hermetic build settings. Bazel uses its
 platform default output root. A developer can set a machine-specific output
@@ -80,7 +84,6 @@ Start with the documents that match your task:
 | --- | --- |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | `sys.Impl`, engines, and dependency direction |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test layout and local verification |
-| [`docs/GATES.md`](docs/GATES.md) | Acceptance checks |
 | [`UUTILS_PIN.md`](UUTILS_PIN.md) | Behavior-oracle pin |
 
 ## Integration

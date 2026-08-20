@@ -12,7 +12,9 @@ registry live in this tree.
 - Keep `fn run(ctx: *Ctx) u8`. Do not put `*sys.Impl` on `Ctx`.
 - Keep the core free of shcore labels.
 - Treat uutils 0.9.0 as the behavior oracle, not a crate.
-- Keep network applets optional. Mem and POSIX backends may return `ENOSYS`.
+- Keep network applets optional. Mem and POSIX backends return `ENOSYS`.
+  An opt-in `sys/http.zig` wrapper serves loopback tests only. `wscat` stays
+  `ENOSYS`.
 
 ## Dependency direction
 
@@ -54,8 +56,9 @@ Free functions in `sys/root.zig` delegate to a process-scoped attached
 `sys.Impl`. `attach` / `detach` are single-threaded. Only the outermost
 embedder calls them; attach is not refcounted. Nested attach of a
 different impl panics. A nested applet `run` on the same impl does not
-re-attach. Mem implements files and process subset. Net/http return
-`ENOSYS`.
+re-attach. Mem implements files and an in-process spawn hook. POSIX execs host
+processes. Net/http return `ENOSYS` on those backends. `sys/http.zig` is an
+opt-in loopback wrapper; attach it only, never under a second `attach`.
 
 Public consume labels are `@utilz//:utilz` and `@utilz//src:lib`. Leaf
 packages under `src/sys` and `src/engines` are not separate Bazel targets.
@@ -63,4 +66,4 @@ packages under `src/sys` and `src/engines` are not separate Bazel targets.
 ## Verification
 
 Bazel is the only supported build and test entry point. See
-[`docs/TESTING.md`](docs/TESTING.md) and [`docs/GATES.md`](docs/GATES.md).
+[`docs/TESTING.md`](docs/TESTING.md).

@@ -1,11 +1,6 @@
 //! Single source of truth for the applet roster: name + tier + min_set flag.
-//! Pure data, no function pointers, so it is importable both by `src/registry.zig`
-//! (which pairs each entry with a `run` fn) and by Bazel tooling (which derives the
-//! `mc_applets` custom-section payloads from it). See DESIGN.md §5.1.
-//!
-//! The roster is 88 names / 87 implementations (`test` and `[` share one), all wired to
-//! real code in registry.zig (enforced there at comptime). An early draft of
-//! the subset inventory miscounted this as "68/67"; the code below is authoritative.
+//! Pure data, no function pointers. `registry.zig` pairs each entry with a `run` fn.
+//! The roster is 88 names / 87 implementations (`test` and `[` share one).
 
 pub const Tier = enum {
     isolated,

@@ -4,14 +4,19 @@ package(default_visibility = ["//visibility:public"])
 
 filegroup(
     name = "goldens",
-    srcs = glob(["goldens/**"]),
+    srcs = glob([
+        "goldens/**",
+        "goldens/**/.keep",
+    ]),
 )
 
 zig_test(
     name = "goldens_test",
     size = "small",
-    extra_srcs = glob(["goldens/**"]),
+    data = [":goldens"],
     main = "goldens_test.zig",
-    deps = ["//src:lib"],
+    deps = [
+        "//src:lib",
+        "@rules_zig//zig/runfiles",
+    ],
 )
-
