@@ -1,11 +1,11 @@
 <div align="center">
   <h1>utilz</h1>
 
-  <p><strong>Unix utilities, written for Zig.</strong></p>
+  <p><strong>Unix tools you can embed.</strong></p>
 
   <p>
-    A pure-Zig multicall userland and the engines behind it.<br>
-    Applets take a <code>*Ctx</code> and talk to the world through <code>sys.Impl</code>.
+    Call <code>cat</code>, <code>grep</code>, <code>sort</code>, and the rest over files,<br>
+    memory, or your own backend. Same applets. You choose where I/O goes.
   </p>
 
   <p>
@@ -17,6 +17,7 @@
 
   <p>
     <a href="#why-utilz">Why utilz</a> ·
+    <a href="#first-program">First program</a> ·
     <a href="#capabilities">Capabilities</a> ·
     <a href="#build">Build</a> ·
     <a href="#project-status">Status</a> ·
@@ -33,20 +34,33 @@ Unix utilities are useful beyond a guest image. Applications need `cat`,
 utilz brings those engines and applets into Zig without a WASI libc and
 without embedding an operating system.
 
-Applets issue syscalls through `sys.Impl`. They do not embed an OS. The
-behavior oracle is [uutils 0.9.0](https://github.com/uutils/coreutils). See
+Applets issue I/O through a syscall table you attach once. They do not embed
+an OS. Behavior is compared to
+[uutils 0.9.0](https://github.com/uutils/coreutils). See
 [`UUTILS_PIN.md`](UUTILS_PIN.md). That pin is a comparison target, not a crate
 dependency.
+
+## First program
+
+On a POSIX host:
+
+```sh
+bazel run //src:utilz -- ls .
+```
+
+`utilz ls`, `utilz cat`, and the rest are the same binary. Attach a different
+backend when you want those applets to read memory instead of the host
+filesystem.
 
 ## Capabilities
 
 - **Engines** — regex, glob, hash, sort, datetime, diff, archives, and
   awk/jq/sed subsets.
-- **Applets** — `run(*Ctx) u8` over an attached `sys.Impl`.
-- **Pluggable backend** — `sys.attach` / `sys.detach` with mem and POSIX
-  implementations. POSIX spawn execs host processes. Network applets return
-  `ENOSYS` on those backends. An opt-in HTTP wrapper speaks loopback only;
-  `wscat` stays `ENOSYS`.
+- **Applets** — the usual suspects (`ls`, `cat`, `grep`, `sort`, `tar`, …)
+  over the attached backend.
+- **Pluggable backend** — memory and POSIX implementations. POSIX spawn execs
+  host processes. Network applets return `ENOSYS` on those backends. An
+  opt-in HTTP wrapper speaks loopback only; `wscat` stays `ENOSYS`.
 
 ## Build
 
@@ -74,18 +88,16 @@ output root and Zig compiler cache in the ignored `user.bazelrc` file.
 
 ## Project status
 
-utilz is a standalone userland. Attach a `sys.Impl`, then call
-`registry.find(name).run(ctx)`.
-
-Start with the documents that match your task:
+utilz is a standalone userland. Attach a backend, then look up an applet by
+name and run it.
 
 | Document | What it covers |
 | --- | --- |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | `sys.Impl`, engines, and dependency direction |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Backends, engines, and dependency direction |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test layout and local verification |
 | [`UUTILS_PIN.md`](UUTILS_PIN.md) | Behavior-oracle pin |
 
-## Integration
+Depend on `@utilz//:utilz`, attach a backend, and run applets. This repository
+does not depend on shcore.
 
-Depend on `@utilz//:utilz`, attach a `sys.Impl`, and call `run(*Ctx) u8`.
-This repository does not depend on shcore.
+Project-owned code is Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
