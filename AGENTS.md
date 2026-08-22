@@ -59,20 +59,21 @@ builds or tests.
 
 ### Bazel output root
 
-Use Bazel's platform default output root unless the local filesystem requires
-a different location. Do not commit a machine-specific output path.
+Do not commit a machine-specific output path or Zig compiler cache path.
 
-Set a local output root in `user.bazelrc` when necessary. This file is ignored
-by Git. Use an absolute path so Bazel commands from workspace subdirectories
-use the same location.
+Set both in ignored `user.bazelrc`. Use absolute paths. Do not leave Bazel
+output or Zig caches under `/tmp` or `~/.cache/bazel`.
 
 ```bazelrc
-startup --output_user_root=/path/to/local/bazel-cache
+startup --output_user_root=/mnt/workspace/opytai/utilz/bazel-cache
+common --repo_env=RULES_ZIG_CACHE_PREFIX=/mnt/workspace/opytai/utilz/zig-cache
+common --repo_env=RULES_ZIG_CACHE_PREFIX_LINUX=/mnt/workspace/opytai/utilz/zig-cache
+build --sandbox_add_mount_pair=/mnt/workspace/opytai/utilz/zig-cache
+build --sandbox_writable_path=/mnt/workspace/opytai/utilz/zig-cache
 ```
 
-The tracked `.bazelrc` imports `user.bazelrc` automatically. Do not add the
-startup option to each command. Do not share this output root with other
-projects.
+The tracked `.bazelrc` imports `user.bazelrc` automatically. Do not add these
+options to each command. Do not share this output root with other projects.
 
 Examples:
 
