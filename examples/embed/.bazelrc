@@ -1,5 +1,4 @@
 # Isolated-min embedder. Machine-local output root belongs in user.bazelrc.
-# Do not import a parent-path bazelrc.
 
 common --enable_workspace=false
 common --enable_bzlmod

@@ -30,13 +30,19 @@ tree planted onto the mem FS (`files/tmp/h` → `/tmp/h`; skip `.keep`).
 Mem `env FOO=bar cmd` must leave `/env` in place; POSIX spawn tests keep
 the host overlay.
 
-`examples/embed/` is a second Bazel module. From that directory:
+`examples/embed/` is a second Bazel module, `.bazelignore`d from the parent
+graph and from `//check:all`. Parent `bazel test //...` does not enter it.
+From that directory:
 
 ```bash
 bazel test //... --override_module=utilz=$(realpath ../..)
 ```
 
-Isolated-min options must not analyze `wget` / `wscat`.
+Isolated-min options must not put `wget` / `wscat` in `registry.box`.
+`utilz_library` still lists every applet source in `srcs` so `@import` can
+see them; Zig comptime `inBox`/`wiredRun` is the DCE gate, not Bazel file
+analysis. The embedder `zig_test` fails compilation if those names appear
+in the filtered roster.
 
 POSIX tests may use the host filesystem. They must not use the public
 internet. If `/bin/true`, `/bin/echo`, `/bin/cat`, or `/usr/bin/env` is

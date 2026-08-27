@@ -87,6 +87,35 @@ fn nestedHook(world: *mem.Mem, argv: []const []const u8, stdin: sys.Fd, stdout: 
     return applet.run(&ctx);
 }
 
+fn epermEnvMkdir(ptr: *anyopaque, path: []const u8) sys.Error!void {
+    if (std.mem.eql(u8, path, "/env")) return error.EPERM;
+    return (@as(*mem.Mem, @ptrCast(@alignCast(ptr)))).doMkdir(path);
+}
+
+test "env FOO=bar cmd succeeds when mkdir /env returns EPERM" {
+    const world = try mem.Mem.init(std.testing.allocator);
+    defer world.deinit();
+    world.spawn_hook = nestedHook;
+    world.attach();
+    defer sys.detach();
+    try sys.mkdir("/env");
+    {
+        const fd = try sys.open("/env/PATH", .{ .write = true, .create = true, .trunc = true });
+        defer sys.close(fd);
+        try sys.writeAll(fd, "/bin");
+    }
+    var vt: sys.VTable = world.sysImpl().vtable.*;
+    vt.mkdir = epermEnvMkdir;
+    world.sysImpl().vtable = &vt;
+    try std.testing.expectError(error.EPERM, sys.mkdir("/env"));
+    const got = try run(world, &.{ "env", "FOO=bar", "true" });
+    defer std.testing.allocator.free(got.stdout);
+    defer std.testing.allocator.free(got.stderr);
+    try std.testing.expectEqual(@as(u8, 0), got.status);
+    _ = try sys.stat("/env");
+    _ = try sys.stat("/env/FOO");
+}
+
 test "env FOO=bar cmd does not unlink /env on mem" {
     const world = try mem.Mem.init(std.testing.allocator);
     defer world.deinit();
