@@ -61,6 +61,54 @@ test "every landed applet accepts --help or runs" {
     }
 }
 
+fn nestedHook(world: *mem.Mem, argv: []const []const u8, stdin: sys.Fd, stdout: sys.Fd, stderr: sys.Fd) sys.Error!u8 {
+    if (argv.len == 0) return error.EINVAL;
+    const base = argv[0];
+    const name = if (std.mem.lastIndexOfScalar(u8, base, '/')) |i| base[i + 1 ..] else base;
+    const applet = registry.find(name) orelse return error.ENOENT;
+    var arena_state = std.heap.ArenaAllocator.init(world.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    var store: std.ArrayListUnmanaged([:0]u8) = .empty;
+    for (argv) |a| {
+        const z = arena.dupeZ(u8, a) catch return error.ENOMEM;
+        store.append(arena, z) catch return error.ENOMEM;
+    }
+    var args: [8][:0]const u8 = undefined;
+    const n = @min(store.items.len, args.len);
+    for (store.items[0..n], 0..) |s, i| args[i] = s;
+    var ctx = Ctx{
+        .args = args[0..n],
+        .gpa = arena,
+        .stdin = stdin,
+        .stdout = stdout,
+        .stderr = stderr,
+    };
+    return applet.run(&ctx);
+}
+
+test "env FOO=bar cmd does not unlink /env on mem" {
+    const world = try mem.Mem.init(std.testing.allocator);
+    defer world.deinit();
+    world.spawn_hook = nestedHook;
+    world.attach();
+    defer sys.detach();
+    try std.testing.expect(!sys.usesHostProcessEnviron());
+    try sys.mkdir("/env");
+    {
+        const fd = try sys.open("/env/PATH", .{ .write = true, .create = true, .trunc = true });
+        defer sys.close(fd);
+        try sys.writeAll(fd, "/bin");
+    }
+    const got = try run(world, &.{ "env", "FOO=bar", "true" });
+    defer std.testing.allocator.free(got.stdout);
+    defer std.testing.allocator.free(got.stderr);
+    try std.testing.expectEqual(@as(u8, 0), got.status);
+    _ = try sys.stat("/env");
+    _ = try sys.stat("/env/PATH");
+    _ = try sys.stat("/env/FOO");
+}
+
 test "fetch and net hooks fail closed" {
     const world = try mem.Mem.init(std.testing.allocator);
     defer world.deinit();

@@ -27,6 +27,16 @@ Optional: `stdin.txt`, `expected_status.txt`, `epipe.txt`, and a `files/`
 tree planted onto the mem FS (`files/tmp/h` → `/tmp/h`; skip `.keep`).
 `//src:posix_spawn_test` execs host `/bin/true` and `/bin/echo`.
 `//src:http_test` uses a loopback responder only.
+Mem `env FOO=bar cmd` must leave `/env` in place; POSIX spawn tests keep
+the host overlay.
+
+`examples/embed/` is a second Bazel module. From that directory:
+
+```bash
+bazel test //... --override_module=utilz=$(realpath ../..)
+```
+
+Isolated-min options must not analyze `wget` / `wscat`.
 
 POSIX tests may use the host filesystem. They must not use the public
 internet. If `/bin/true`, `/bin/echo`, `/bin/cat`, or `/usr/bin/env` is

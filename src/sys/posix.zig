@@ -915,6 +915,9 @@ fn v_enosys_status(_: *anyopaque, _: Fd) Error!u32 {
 fn v_poll(_: *anyopaque, _: []PollFd, _: i32) Error!usize {
     return error.ENOSYS;
 }
+fn v_usesHostProcessEnviron(_: *anyopaque) bool {
+    return true;
+}
 
 const vtable = sys.VTable{
     .init = v_init,
@@ -957,6 +960,7 @@ const vtable = sys.VTable{
     .httpStatus = v_enosys_status,
     .wsOpen = v_enosys_fd,
     .poll = v_poll,
+    .usesHostProcessEnviron = v_usesHostProcessEnviron,
 };
 
 comptime {

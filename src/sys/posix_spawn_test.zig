@@ -199,6 +199,15 @@ test "xargs /bin/echo from stdin pipe" {
     try std.testing.expectEqualStrings("a b\n", got.stdout);
 }
 
+test "posix usesHostProcessEnviron is true" {
+    try requireHostBins();
+    var host = try Posix.init(std.testing.allocator);
+    defer host.deinit();
+    host.attach();
+    defer sys.detach();
+    try std.testing.expect(sys.usesHostProcessEnviron());
+}
+
 test "env /bin/true and env /bin/echo hi" {
     try requireHostBins();
     const host = try Posix.init(std.testing.allocator);

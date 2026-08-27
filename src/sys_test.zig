@@ -194,6 +194,9 @@ fn iw_http_status(_: *anyopaque, _: sys.Fd) sys.Error!u32 {
 fn iw_poll(_: *anyopaque, _: []sys.PollFd, _: i32) sys.Error!usize {
     return error.ENOSYS;
 }
+fn iw_usesHostProcessEnviron(_: *anyopaque) bool {
+    return false;
+}
 
 const iw_vtable = sys.VTable{
     .init = iw_init,
@@ -236,6 +239,7 @@ const iw_vtable = sys.VTable{
     .httpStatus = iw_http_status,
     .wsOpen = iw_http_fd,
     .poll = iw_poll,
+    .usesHostProcessEnviron = iw_usesHostProcessEnviron,
 };
 
 test "waitRetry retries EINTR" {

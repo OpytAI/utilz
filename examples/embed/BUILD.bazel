@@ -1,0 +1,19 @@
+load("@rules_zig//zig:defs.bzl", "zig_library", "zig_test")
+load("@utilz//bazel:defs.bzl", "utilz_library")
+
+zig_library(
+    name = "build_options",
+    import_name = "build_options",
+    main = "build_options.zig",
+)
+
+utilz_library(
+    name = "lib",
+    build_options = ":build_options",
+)
+
+zig_test(
+    name = "isolated_min_audit",
+    main = "audit.zig",
+    deps = [":lib"],
+)

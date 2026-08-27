@@ -65,6 +65,7 @@ pub const VTable = struct {
     httpStatus: *const fn (ptr: *anyopaque, fd: Fd) Error!u32,
     wsOpen: *const fn (ptr: *anyopaque, url: []const u8) Error!Fd,
     poll: *const fn (ptr: *anyopaque, fds: []PollFd, timeout_ms: i32) Error!usize,
+    usesHostProcessEnviron: *const fn (ptr: *anyopaque) bool,
 };
 
 /// Attachable implementation behind the `sys` free functions.
@@ -303,6 +304,11 @@ pub fn wsOpen(url: []const u8) Error!Fd {
 pub fn poll(fds: []PollFd, timeout_ms: i32) Error!usize {
     const impl = require();
     return impl.vtable.poll(impl.ptr, fds, timeout_ms);
+}
+
+pub fn usesHostProcessEnviron() bool {
+    const impl = require();
+    return impl.vtable.usesHostProcessEnviron(impl.ptr);
 }
 
 pub fn strerror(e: Errno) []const u8 {

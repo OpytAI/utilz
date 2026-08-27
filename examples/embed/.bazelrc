@@ -1,0 +1,11 @@
+# Isolated-min embedder. Machine-local output root belongs in user.bazelrc.
+# Do not import a parent-path bazelrc.
+
+common --enable_workspace=false
+common --enable_bzlmod
+common --enable_runfiles
+common --incompatible_strict_action_env
+test --test_output=errors
+common --registry=https://bcr.bazel.build/
+
+try-import %workspace%/user.bazelrc

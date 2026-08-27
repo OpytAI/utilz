@@ -188,7 +188,7 @@ pub fn run(ctx: *Ctx) u8 {
             const names = envfs.list(ctx.gpa) catch &.{};
             for (names) |name| envfs.unset(name) catch {};
         } else {
-            copyHostEnviron(ctx.gpa);
+            if (sys.usesHostProcessEnviron()) copyHostEnviron(ctx.gpa);
             for (unsets.items) |name| envfs.unset(name) catch {};
         }
         var ai: usize = 0;
@@ -197,7 +197,7 @@ pub fn run(ctx: *Ctx) u8 {
             const eq_idx = std.mem.indexOfScalar(u8, tok, '=') orelse break;
             envfs.set(tok[0..eq_idx], tok[eq_idx + 1 ..]) catch |e| {
                 ctx.errPrint("env: {s}: {s}\n", .{ tok[0..eq_idx], sys.strerror(sys.toErrno(e)) });
-                wipeEnvDir(ctx.gpa);
+                if (sys.usesHostProcessEnviron()) wipeEnvDir(ctx.gpa);
                 return 1;
             };
         }
@@ -207,7 +207,7 @@ pub fn run(ctx: *Ctx) u8 {
     for (command) |a| argv.append(ctx.gpa, a) catch @panic("OOM");
     const blob = proc.argvBlob(ctx.gpa, argv.items) catch @panic("OOM");
     const result = proc.spawnWait(blob, ctx.stdin, ctx.stdout, ctx.stderr);
-    if (mutating) wipeEnvDir(ctx.gpa);
+    if (mutating and sys.usesHostProcessEnviron()) wipeEnvDir(ctx.gpa);
     switch (result) {
         .status => |st| return proc.statusToExit(st),
         .spawn_err => |e| {

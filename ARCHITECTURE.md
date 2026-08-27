@@ -60,8 +60,15 @@ re-attach. Mem implements files and an in-process spawn hook. POSIX execs host
 processes. Net/http return `ENOSYS` on those backends. `sys/http.zig` is an
 opt-in loopback wrapper; attach it only, never under a second `attach`.
 
-Public consume labels are `@utilz//:utilz` and `@utilz//src:lib`. Leaf
-packages under `src/sys` and `src/engines` are not separate Bazel targets.
+Public consume labels are `@utilz//:utilz` and `@utilz//src:lib`. Embedders
+that filter the roster load `@utilz//bazel:defs.bzl` (`utilz_library`) and
+`@utilz//src:srcs` (Zig sources excluding `root.zig`). Leaf packages under
+`src/sys` and `src/engines` are not separate Bazel targets.
+
+`sys.VTable.usesHostProcessEnviron` is true only for the POSIX backend
+(and wrappers that forward to it). `env` copies `/proc/self/environ` and
+wipes `/env` after spawn only when that bit is set, so a guest `/env` is
+not unlinked.
 
 ## Verification
 

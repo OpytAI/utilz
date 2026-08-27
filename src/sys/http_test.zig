@@ -5,6 +5,7 @@ const linux = std.os.linux;
 const utilz = @import("utilz");
 const sys = utilz.sys;
 const mem = utilz.mem;
+const posix_mod = utilz.posix;
 const http_mod = utilz.http;
 const registry = utilz.registry;
 const Ctx = utilz.Ctx;
@@ -145,6 +146,31 @@ test "fetch and wget against loopback CRLF responder" {
         const n = try sys.read(fd, &buf);
         try std.testing.expectEqualStrings(body_text, buf[0..n]);
     }
+}
+
+test "http wrapper forwards usesHostProcessEnviron" {
+    const world = try mem.Mem.init(std.testing.allocator);
+    defer world.deinit();
+    world.attach();
+    defer sys.detach();
+    try std.testing.expect(!sys.usesHostProcessEnviron());
+    sys.detach();
+
+    const wrap = try Http.init(std.testing.allocator, world.sysImpl());
+    defer wrap.deinit();
+    wrap.attach();
+    defer sys.detach();
+    try std.testing.expect(!sys.usesHostProcessEnviron());
+}
+
+test "http wrapping posix forwards usesHostProcessEnviron" {
+    var host = try posix_mod.Posix.init(std.testing.allocator);
+    defer host.deinit();
+    const wrap = try Http.init(std.testing.allocator, host.sysImpl());
+    defer wrap.deinit();
+    wrap.attach();
+    defer sys.detach();
+    try std.testing.expect(sys.usesHostProcessEnviron());
 }
 
 test "wrapper rejects non-loopback and websocket" {

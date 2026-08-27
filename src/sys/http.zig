@@ -507,6 +507,10 @@ fn v_wsOpen(_: *anyopaque, _: []const u8) Error!Fd {
 fn v_poll(_: *anyopaque, _: []PollFd, _: i32) Error!usize {
     return error.ENOSYS;
 }
+fn v_usesHostProcessEnviron(ptr: *anyopaque) bool {
+    const inner = innerOf(ptr);
+    return inner.vtable.usesHostProcessEnviron(inner.ptr);
+}
 
 const vtable = sys.VTable{
     .init = v_init,
@@ -549,6 +553,7 @@ const vtable = sys.VTable{
     .httpStatus = v_httpStatus,
     .wsOpen = v_wsOpen,
     .poll = v_poll,
+    .usesHostProcessEnviron = v_usesHostProcessEnviron,
 };
 
 comptime {

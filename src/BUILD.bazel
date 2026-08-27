@@ -19,6 +19,17 @@ LIB_SRCS = glob(
     ],
 )
 
+filegroup(
+    name = "srcs",
+    srcs = LIB_SRCS,
+    visibility = ["//visibility:public"],
+)
+
+exports_files([
+    "root.zig",
+    "registry_data.zig",
+])
+
 zig_library(
     name = "lib",
     srcs = LIB_SRCS,

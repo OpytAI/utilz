@@ -1,0 +1,2 @@
+# Nested Bazel module; tested from examples/embed with --override_module.
+examples/embed
