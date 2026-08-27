@@ -179,6 +179,8 @@ pub fn run(ctx: *Ctx) u8 {
     if (mutating) {
         sys.mkdir("/env") catch |e| switch (e) {
             error.EEXIST => {},
+            // Guest /env is a live overlay; mkdir of that node is EPERM, not EEXIST.
+            error.EPERM => {},
             else => {
                 ctx.errPrint("env: /env: {s}\n", .{sys.strerror(sys.toErrno(e))});
                 return 1;
